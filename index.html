@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>*,*::before,*::after{box-sizing:border-box}:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Ironman Progression Chart</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+/* Layout: side rail of chart boxes (gear, route, bosses, 24 skills) + one main chart of staged, flowing milestone boxes */
+:root{
+  --bg:#e4e1d7;--panel:#f2f0e8;--raise:#faf9f4;--ink:#26221b;--muted:#6a6455;--line:#c6c1b1;
+  --accent:#b85a08;--accent-soft:#f3dcc2;--done:#237a3b;--done-bg:#d3ead4;--skip:#8b8676;--skip-bg:#dedbd0;
+  --hc:#b3261e;--hc-bg:#f6d9d5;--ready:#1d5fa8;
+  --display:"Cinzel",Georgia,serif;--body:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#1a1814;--panel:#24211b;--raise:#2e2a22;--ink:#ece5d3;--muted:#a59d8a;--line:#3f3a2f;
+  --accent:#ff981f;--accent-soft:#4a3413;--done:#57c46f;--done-bg:#1d3a24;--skip:#8d8676;--skip-bg:#2b2823;
+  --hc:#f0766a;--hc-bg:#45201c;--ready:#6fb1f5;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1a1814;--panel:#24211b;--raise:#2e2a22;--ink:#ece5d3;--muted:#a59d8a;--line:#3f3a2f;
+  --accent:#ff981f;--accent-soft:#4a3413;--done:#57c46f;--done-bg:#1d3a24;--skip:#8d8676;--skip-bg:#2b2823;
+  --hc:#f0766a;--hc-bg:#45201c;--ready:#6fb1f5;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 48px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:.01em}
+h1{font-size:1.5rem}h2{font-size:1.25rem}h3{font-size:1rem}
+a{color:var(--accent)}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.top{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:baseline;margin-bottom:14px}
+.top p{margin:0;color:var(--muted)}
+.mode{font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--hc);border:1px solid var(--hc);border-radius:3px;padding:1px 6px}
+.shell{display:grid;grid-template-columns:230px minmax(0,1fr);gap:20px;align-items:start}
+nav{display:flex;flex-direction:column;gap:12px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 8px);max-height:calc(100vh - 24px);overflow:auto;padding:2px}
+.navgroup{display:grid;gap:6px}
+.navgroup.skills{grid-template-columns:1fr 1fr}
+.navlabel{font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.nb{display:flex;justify-content:space-between;gap:6px;align-items:center;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:7px 9px;font-weight:600;font-size:.85rem;text-decoration:none;color:var(--ink);min-width:0}
+.nb span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nb small{font-weight:400;color:var(--muted);font-variant-numeric:tabular-nums;font-size:.72rem;flex:none}
+.nb:hover{border-color:var(--accent)}
+.nb[aria-current="page"]{background:var(--accent-soft);border-color:var(--accent)}
+.nb.full small{color:var(--done);font-weight:700}
+main{min-width:0;display:flex;flex-direction:column;gap:18px}
+.head{display:flex;flex-direction:column;gap:6px}
+.head p{margin:0;color:var(--muted);max-width:70ch}
+.bar{height:8px;background:var(--skip-bg);border:1px solid var(--line);border-radius:4px;overflow:hidden;max-width:420px}
+.bar i{display:block;height:100%;background:var(--done)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.8rem;color:var(--muted)}
+.legend b{display:inline-block;width:11px;height:11px;border-radius:2px;border:1px solid var(--line);vertical-align:-1px;margin-right:4px}
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.stage>p{margin:0;color:var(--muted);font-size:.88rem;max-width:75ch}
+.flow{display:flex;flex-wrap:wrap;gap:10px 22px}
+.box{position:relative;width:150px;min-height:62px;background:var(--raise);border:1px solid var(--line);border-radius:4px;padding:6px 8px;text-align:left;display:flex;flex-direction:column;gap:3px;justify-content:space-between;font-size:.84rem;font-weight:600;line-height:1.2}
+.flow .box+.box::before{content:"";position:absolute;left:-17px;top:50%;width:11px;border-top:2px solid var(--line)}
+.box:hover{border-color:var(--accent)}
+.box .meta{display:flex;gap:4px;flex-wrap:wrap;align-items:center;font-weight:600;font-size:.66rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.box .lvl{background:var(--accent-soft);color:var(--ink);border-radius:2px;padding:0 4px;font-variant-numeric:tabular-nums}
+.box .dg{border-radius:2px;padding:0 4px;background:var(--hc-bg);color:var(--hc)}
+.box.ready{border-color:var(--ready);box-shadow:inset 3px 0 0 var(--ready)}
+.box.locked{opacity:.72}
+.box.done{background:var(--done-bg);border-color:var(--done);opacity:1;box-shadow:none}
+.box.done .nm::before{content:"✓ ";color:var(--done)}
+.box.skip{background:var(--skip-bg);border-style:dashed;color:var(--skip);opacity:1;box-shadow:none}
+.box.skip .nm{text-decoration:line-through}
+#tip{position:absolute;z-index:30;width:min(340px,calc(100vw - 32px));background:var(--raise);border:1px solid var(--accent);border-radius:6px;padding:10px 12px;font-size:.84rem;box-shadow:0 6px 24px rgba(0,0,0,.28);pointer-events:none}
+#tip.sheet{position:fixed;left:0;right:0;bottom:0;width:auto;max-height:70vh;overflow:auto;border-radius:10px 10px 0 0;pointer-events:auto;
+  padding:14px max(16px,env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+#tip h3{margin-bottom:6px}
+#tip dl{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 10px}
+#tip dt{color:var(--muted);font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding-top:2px}
+#tip dd{margin:0}
+#tip .ok{color:var(--done);font-weight:600}#tip .no{color:var(--hc);font-weight:600}
+#tip .hcrow{color:var(--hc)}
+#tip .hint{margin:8px 0 0;color:var(--muted);font-size:.75rem}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.btn{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:7px 12px;font-weight:600}
+.btn.pri{background:var(--done-bg);border-color:var(--done)}
+.btn:hover{border-color:var(--accent)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:6px}
+.card ul{margin:0;padding-left:18px}.card p{margin:0}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.stats label{display:flex;justify-content:space-between;align-items:center;gap:6px;background:var(--raise);border:1px solid var(--line);border-radius:4px;padding:5px 8px;font-size:.85rem;font-weight:600}
+.stats input{width:54px;font:inherit;padding:3px 4px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:3px;font-variant-numeric:tabular-nums}
+textarea{width:100%;min-height:64px;font:.8rem ui-monospace,Menlo,monospace;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:6px}
+.note{color:var(--muted);font-size:.82rem}
+footer{color:var(--muted);font-size:.8rem;margin-top:8px;max-width:80ch}
+@media (max-width:820px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  nav{position:static;max-height:none;overflow:visible}
+  .navgroup{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
+  .navgroup.skills{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
+  .box{width:calc(50% - 11px)}
+}
+@media (prefers-reduced-motion:no-preference){.box{transition:background .12s,border-color .12s}}
+</style>
+
+<div class="top">
+  <h1>Ironman Progression Chart</h1>
+  <span class="mode">Hardcore Ironman</span>
+  <p>Gear, skill and boss charts with quest, diary and combat-task gates. Hover for details, click when done.</p>
+</div>
+<div class="shell">
+  <nav id="nav" aria-label="Charts"></nav>
+  <main id="main"></main>
+</div>
+<footer>Sequencing draws on Ladlor's interactive gear chart, the scottymartin1992 chart, Yazi's gear progression and the Bossing Ladder on the OSRS Wiki, and B0aty's HCIM guide. Drop rates and point costs are as I know them from the OSRS Wiki; entries marked with ≈ are approximate, so confirm on the wiki before a long grind. Progress saves in this browser only.</footer>
+<div id="tip" hidden></div>
+
+<script>
+const SK=["Attack","Strength","Defence","Hitpoints","Ranged","Prayer","Magic","Runecraft","Construction","Agility","Herblore","Thieving","Crafting","Fletching","Slayer","Hunter","Mining","Smithing","Fishing","Cooking","Firemaking","Woodcutting","Farming","Sailing"];
+const L={l:"Levels",q:"Quests",c:"Cost / points",g:"Where / how",m:"Materials",r:"Drop rate",w:"Why",h:"Hardcore"};
+
+/* ---------- GEAR: one cohesive sequence ---------- */
+const GEAR=[
+{t:"Off Tutorial Island",p:"Free or near-free upgrades and the unlocks that make everything after them faster.",n:[
+["Stronghold of Security","Unlock",{g:"Barbarian Village. Answer the security questions on all four floors.",c:"Rewards 10,000 gp and fancy or fighting boots",w:"Start-up cash for shops and the first boot slot.",h:"Monsters are aggressive and get strong on floors 3 and 4. Bring food and keep running."}],
+["Mooleta","Drop",{q:"The Ides of Milk",g:"Brutus, Lumbridge cow field",r:"1/30",w:"Off-hand close to a steel defender with no requirements."}],
+["Waterfall Quest","Quest",{g:"Baxtorian Falls",w:"13,750 Attack and Strength XP, taking both from 1 to 30 with no combat.",h:"Aggressive fire and moss giants in the dungeon. Bring food and do not stop."}],
+["Adamant scimitar","Quest",{l:"Thieving 30, Attack 30",q:"The Feud",g:"Quest reward"}],
+["Anti-dragon shield","Quest",{q:"Start Dragon Slayer I",g:"Duke Horacio, Lumbridge castle",w:"Needed for every dragon until the dragonfire shield."}],
+["Climbing boots","Shop",{q:"Death Plateau",c:"12 gp from Tenzing",w:"+2 Strength boots until dragon boots."}],
+["Ardougne cloak 1","Diary",{g:"Ardougne easy diary",w:"Unlimited Monastery teleports and the first step to the thieving bonus."}],
+["Explorer's ring 1","Diary",{g:"Lumbridge & Draynor easy diary",w:"Free daily low alchs and run restore; later rings teleport to the cabbage patch."}],
+["Rada's blessing 1","Diary",{g:"Kourend & Kebos easy diary",w:"Ammo-slot Prayer bonus that grows with each tier."}],
+["Amulet of strength","Craft",{l:"Crafting 50, Magic 49",m:"Gold bar, cut ruby, amulet mould, ball of wool; Lvl-3 Enchant (5 fire, 1 cosmic)",w:"Best melee strength neck until fury or torture."}],
+["Amulet of power","Craft",{l:"Crafting 70, Magic 57",m:"Gold bar, cut diamond; Lvl-4 Enchant (10 earth, 1 cosmic)",w:"All-round neck for ranged and magic until glory."}],
+["Graceful outfit","Minigame",{l:"Agility 10",c:"260 marks of grace for the full set",g:"Rooftop courses; buy from Grace in the Rogues' Den",w:"Run energy for every quest and skilling trip."}],
+["Fairy rings","Unlock",{q:"Lost City; Fairytale I; start Fairytale II",l:"Crafting 31, Woodcutting 36",g:"Dramen staff from Entrana, then Fairy Godfather's permission",w:"The transport network for farm runs, Slayer and quests."}],
+["43 Prayer","Skill",{l:"Prayer 43",g:"Bull bones from Brutus early, then dragon bones or blessed bone shards",w:"Protection prayers make most quest bosses and early bosses safe."}]]},
+{t:"Early game",p:"Quest-locked gear up to Barrows gloves and the fire cape.",n:[
+["Rune armour","Shop",{l:"Defence 40",q:"Dragon Slayer I for the platebody",g:"Legs from Scavvo's Rune Store (Champions' Guild, 32 quest points); platebody from Oziach",h:"Elvarg: bring an anti-dragon shield, antifire and plenty of food."}],
+["Dragon scimitar","Quest",{l:"Attack 60",q:"Monkey Madness I",c:"100,000 gp from Daga on Ape Atoll",w:"Main training weapon until the zombie axe or whip.",h:"Ape Atoll archers and poison are the usual HCIM killers. Pray, bring antipoison, and safespot the Jungle Demon."}],
+["Berserker helm","Shop",{l:"Defence 45",q:"The Fremennik Trials",c:"78,000 gp from Skulgrimen"}],
+["Helm of Neitiznot","Quest",{l:"Defence 55",q:"The Fremennik Isles",w:"Best melee helm for a long time."}],
+["Dorgeshuun crossbow","Shop",{l:"Ranged 28",q:"The Lost Tribe",g:"Nardok in the Dorgeshuun mine; bone bolts sold alongside",w:"Cheap, fast early ranged with buyable ammo."}],
+["Ava's accumulator","Quest",{l:"Ranged 50",q:"Animal Magnetism",c:"75 steel arrows to upgrade the attractor",w:"Returns most ammo. Essential for an iron."}],
+["Green to red d'hide","Craft",{l:"Ranged 40, Defence 40, Crafting 63",q:"Dragon Slayer I to wear bodies",g:"Hides from green, blue and red dragons; tan and craft",w:"Blue needs Ranged 50, red needs Ranged 60."}],
+["Dragon dagger","Shop",{l:"Attack 60",q:"Lost City",c:"30,000 gp in Zanaris",w:"Cheap special attack weapon."}],
+["Mystic robes","Shop",{l:"Magic 66, Defence 20",g:"Wizards' Guild store, Yanille (Magic 66 to enter)",w:"First real magic armour."}],
+["Iban's staff","Quest",{l:"Magic 50, Attack 50",q:"Underground Pass",c:"200,000 gp for the (u) upgrade",w:"Hard-hitting spell for Barrows and early bosses.",h:"Failed agility obstacles in the pass deal damage. Bring far more food than you expect to need."}],
+["God cape","Minigame",{l:"Magic 60",g:"Mage Arena I, defeat Kolodion",w:"Magic cape and the god spells.",h:"The arena sits in level 56 Wilderness. A PKer kill ends hardcore status."}],
+["Ancient Magicks","Quest",{l:"Magic 50, Thieving 53, Firemaking 50, Slayer 10",q:"Desert Treasure I",w:"Ice spells for bursting Slayer tasks and freezing.",h:"Four bosses, each with its own gimmick. Read each fight first."}],
+["Fighter torso","Minigame",{l:"Defence 40",c:"375 honour points in each of the 4 roles, plus one Penance Queen kill",g:"Barbarian Assault, north of Baxtorian Falls",w:"Bandos-level strength bonus body.",h:"Barbarian Assault deaths are safe."}],
+["Dragon defender","Drop",{l:"Attack 65, Strength 65",g:"Warriors' Guild (Attack + Strength 130 combined). Earn tokens on animated armour, work up from bronze, show a rune defender to enter the basement",r:"1/100 from basement cyclopes",w:"Best off-hand until the avernic."}],
+["Salve amulet (e)","Quest",{l:"Crafting 35, Slayer 40",q:"Haunted Mine, then Lair of Tarn Razorlor",w:"20% damage and accuracy against undead. Imbue it later at Nightmare Zone."}],
+["Barrows gloves","Quest",{l:"Cooking 70, Magic 59, Fishing 53, Thieving 53, Mining 50, Firemaking 50, Agility 48",q:"Recipe for Disaster (175 quest points)",c:"130,000 gp from the Culinaromancer's chest",w:"Best all-round gloves for most of the game. Each subquest unlocks a better pair on the way."}],
+["Medium combat tasks","Combat tasks",{g:"Claim Ghommal's hilt 2 outside the Warriors' Guild. The point threshold rises as tasks are added, so check the in-game overview",w:"Removes Barrows prayer drain while the hilt is equipped, more Warriors' Guild tokens, +2 Pest Control points per game."}],
+["Fire cape","Minigame",{l:"Ranged 70, Prayer 43",g:"TzHaar Fight Cave, 63 waves ending in TzTok-Jad",w:"Best melee cape until the infernal cape.",h:"Fight Cave deaths count. Practise Jad prayer switches on a simulator before you go in."}]]},
+{t:"Mid game",p:"Barrows, Moons, Slayer drops and the minigame sets.",n:[
+["Zombie axe","Drop",{l:"Attack 65, Smithing 70",q:"Defender of Varrock",g:"Armoured zombies under Varrock; repair the broken axe at an anvil",r:"≈1/600",w:"Whip-level slash weapon without 85 Slayer."}],
+["Barrows equipment","Drop",{l:"Attack 70, Defence 70, Magic 70, Ranged 70",q:"Priest in Peril",g:"Barrows chest. Ahrim's and Karil's first, Dharok's for Nightmare Zone, Guthan's for healing",r:"≈1 in 15 chests gives a piece with all six brothers killed; a specific piece ≈1/350",w:"Morytania hard diary gives 50% more runes from the chest.",h:"Deaths count. Get Medium combat tasks first so your prayer does not drain."}],
+["Void Knight set","Minigame",{l:"Attack 42, Strength 42, Defence 42, Hitpoints 42, Ranged 42, Magic 42, Prayer 22",c:"850 points with one helm: top 250, robe 250, gloves 150, helm 200. Each extra helm 200",g:"Pest Control, Void Knights' Outpost",w:"Strong ranged set. Elite void needs the Western Provinces hard diary plus 200 points per piece.",h:"Pest Control deaths are safe."}],
+["Moons of Peril sets","Drop",{l:"Strength 75, Ranged 75, Magic 75, Defence 50",q:"Perilous Moons",g:"Lunar chest in Neypotzli. Blood Moon needs Strength, Eclipse needs Ranged, Blue Moon needs Magic",r:"≈1 in 19 chests for a unique with all three moons killed",w:"Blood Moon and the Eclipse atlatl are standout mid-game gear. Supplies are made inside.",h:"Deaths count and prayers do not block the moons' specials."}],
+["Hunters' sunlight crossbow","Craft",{l:"Ranged 66, Hunter 72, Fletching 74",g:"Sunlight antelope antlers from Hunter; moonlight antler bolts as ammo",w:"Rune crossbow replacement an iron can make. Levels are approximate, check the wiki."}],
+["Broad bolts","Unlock",{l:"Slayer 55, Fletching 55, Ranged 61",c:"300 Slayer points for Broader Fletching",w:"Cheap, strong bolts made from shop supplies."}],
+["Amulet of glory","Craft",{l:"Crafting 80, Magic 68",m:"Gold bar, cut dragonstone; Lvl-5 Enchant",g:"Dragonstones from crystal keys, gem drops and Corrupted Gauntlet later"}],
+["Warped sceptre","Drop",{l:"Magic 62, Slayer 56",q:"The Path of Glouphrie",g:"Warped creatures in the Poison Waste dungeon",w:"Powered staff that bridges Iban's to the trident."}],
+["Piety","Unlock",{l:"Prayer 70, Defence 70",q:"King's Ransom, then the Knight Waves training ground",w:"The melee prayer.",h:"Knight Waves are safe: you are sent out at 0 hitpoints."}],
+["Deadeye and Mystic Vigour","Drop",{l:"Prayer 62",g:"Prayer scrolls from the Royal Titans, Asgarnian Ice Dungeon",w:"Ranged and magic prayers that hold you over until Rigour and Augury. Mystic Vigour needs Prayer 63."}],
+["Slayer helmet","Unlock",{l:"Slayer 58, Crafting 55, Defence 10",q:"Cabin Fever for cave horrors",c:"400 Slayer points to learn",m:"Black mask, nose peg, facemask, earmuffs, spiny helmet, enchanted gem",r:"Black mask 1/512 from cave horrors",w:"16.67% melee accuracy and damage on task. Imbue for 1,250,000 Nightmare Zone points to cover ranged and magic."}],
+["Rune pouch","Unlock",{c:"750 Slayer points, or Last Man Standing points",w:"Three rune types in one slot."}],
+["Dragon boots","Drop",{l:"Slayer 83, Defence 60",g:"Spiritual mages, God Wars Dungeon",r:"1/128"}],
+["Abyssal whip","Drop",{l:"Slayer 85, Attack 70",g:"Abyssal demons",r:"1/512"}],
+["Trident of the seas","Drop",{l:"Slayer 87, Magic 75",g:"Kraken, or cave krakens for an uncharged trident",r:"1/512 from Kraken",m:"Charges: death, chaos and fire runes plus coins"}],
+["Occult necklace","Drop",{l:"Slayer 93, Magic 70",g:"Smoke devils and the Thermonuclear smoke devil",r:"1/350",w:"Magic damage neck. Boost Slayer with a wild pie if you are close."}],
+["Imbued god cape","Minigame",{l:"Magic 75",q:"Mage Arena II miniquest",w:"Magic damage cape.",h:"Three bosses roam the deep Wilderness. This is one of the riskiest unlocks for a hardcore; many skip it."}],
+["Berserker ring (i)","Drop",{g:"Dagannoth Rex, Waterbirth Island. Imbue for 650,000 Nightmare Zone points",q:"The Fremennik Trials",r:"1/128",w:"Archers ring from Supreme and seers ring from Prime at the same rate."}],
+["Toxic blowpipe","Drop",{l:"Ranged 75, Fletching 78",q:"Regicide to reach Zulrah",g:"Tanzanite fang from Zulrah; needs Zulrah's scales and darts",r:"1/1,024 per roll, two rolls a kill",h:"Zulrah kills many hardcores during learning. Master the rotations on a main or simulator first."}],
+["Thralls","Unlock",{l:"Magic 76",q:"A Kingdom Divided",g:"Arceuus spellbook, book of the dead",w:"Free extra damage at every boss. Lesser thralls at Magic 38, superior at 57."}],
+["Bonecrusher","Diary",{g:"Morytania hard diary, from the ghost disciple at the Ectofuntus",w:"Buries bones as they drop for passive Prayer XP on Slayer."}],
+["Arclight","Craft",{q:"Shadow of the Storm",l:"Attack 75",m:"Darklight plus 3 ancient shards, from the Catacombs of Kourend and Skotizo",w:"Demonbane weapon for K'ril, Cerberus, Skotizo and Tormented Demons."}]]},
+{t:"Late game",p:"The crystal bow, God Wars, zenytes and the big Slayer bosses.",n:[
+["Bow of Faerdhinn","Drop",{l:"Ranged 80, Agility 70, Crafting 82, Smithing 82",q:"Song of the Elves",g:"Enhanced crystal weapon seed from the Corrupted Gauntlet, sung with 100 crystal shards",r:"1/400 per Corrupted Gauntlet",w:"The item that opens up late-game bossing for an iron.",h:"Gauntlet deaths count. Expect to practise the normal Gauntlet a lot first."}],
+["Crystal armour","Drop",{l:"Defence 70, Crafting 74, Smithing 74",q:"Song of the Elves",g:"Six crystal armour seeds plus shards",r:"1/50 per Corrupted Gauntlet",w:"Boosts the bow's accuracy and damage."}],
+["Bandos armour","Drop",{l:"Defence 65",g:"General Graardor, God Wars Dungeon (Strength 70 for the door)",q:"Troll Stronghold",r:"1/381 per piece",w:"Fremennik hard diary makes aviansies drop noted adamantite bars on the way."}],
+["Armadyl armour","Drop",{l:"Ranged 70, Defence 70",g:"Kree'arra (Ranged 70 for the door)",r:"1/381 per piece"}],
+["Armadyl crossbow","Drop",{l:"Ranged 70",g:"Commander Zilyana (Agility 70 for the door)",r:"1/508"}],
+["Zenyte jewellery","Craft",{l:"Crafting 98, Magic 93",q:"Monkey Madness II",g:"Zenyte shards from demonic gorillas; fuse with a cut onyx",r:"1/300",m:"Onyx: 300,000 tokkul in Mor Ul Rek, or Zulrah. Ring needs Crafting 89, bracelet 95, amulets 98. All boostable",w:"Torture, anguish, tormented bracelet and ring of suffering."}],
+["Ava's assembler","Quest",{l:"Ranged 70",q:"Dragon Slayer II",g:"Vorkath's head (guaranteed at 50 kills) plus 75 mithril arrows"}],
+["Dragon hunter lance","Drop",{l:"Slayer 95, Attack 78",g:"Hydra's claw on a Zamorakian hasta",r:"Claw 1/1,001 from the Alchemical Hydra",w:"Best weapon against Vorkath and other dragons."}],
+["Ferocious gloves","Drop",{l:"Slayer 95, Attack 80, Defence 80",q:"Dragon Slayer II for the machinery",g:"Hydra leather",r:"1/514"}],
+["Primordial, pegasian, eternal boots","Drop",{l:"Slayer 91, Runecraft 60, Magic 60",g:"Cerberus crystals on dragon, ranger or infinity boots",r:"1/512 per crystal"}],
+["Emberlight and burning claws","Drop",{q:"While Guthix Sleeps",g:"Tormented Demons. A synapse upgrades Arclight; two burning claws make the special attack weapon",r:"≈1/500 each"}],
+["Osmumten's fang","Drop",{l:"Attack 82",q:"Beneath Cursed Sands",g:"Tombs of Amascut",r:"7 in 24 uniques. Unique chance rises with raid level and points",w:"Lightbearer has the same weight. Both arrive from entry-level raids.",h:"Raid deaths count."}],
+["Rigour and Augury","Drop",{l:"Prayer 77, Defence 70",g:"Dexterous and arcane prayer scrolls, Chambers of Xeric",r:"20 in 69 uniques each. Unique chance is about 1% per 8,676 points",w:"Rigour needs Prayer 74, Augury 77."}],
+["Venator bow","Drop",{l:"Ranged 80",q:"Secrets of the North",g:"Five venator shards from the Phantom Muspah",r:"1/100 per shard"}],
+["Desert Treasure II rings","Drop",{q:"Desert Treasure II",l:"Magic 90, Crafting 80",g:"Vestiges from Duke, Leviathan, Whisperer and Vardorvis, plus chromium ingots and a Dagannoth Kings ring",r:"≈1/500 to 1/1,100 depending on boss",w:"Ultor, bellator, magus and venator rings."}],
+["Dragon warhammer","Drop",{l:"Strength 60, Slayer 1",g:"Lizardman shamans",r:"1/3,000",w:"Defence-draining special. The elder maul from Chambers replaces it."}],
+["Amulet of rancour","Drop",{l:"Slayer 92",g:"Araxyte fang from Araxxor, combined with an amulet of torture",r:"≈1/600",w:"The noxious halberd also comes from here."}]]},
+{t:"End game",p:"Raid megarares and best-in-slot. Every one of these fights can end a hardcore.",n:[
+["Masori armour","Drop",{l:"Ranged 80, Defence 30",g:"Tombs of Amascut",r:"2 in 24 uniques per piece"}],
+["Tumeken's shadow","Drop",{l:"Magic 85",g:"Tombs of Amascut",r:"1 in 24 uniques"}],
+["Twisted bow","Drop",{l:"Ranged 85",g:"Chambers of Xeric",r:"2 in 69 uniques"}],
+["Ancestral robes","Drop",{l:"Magic 75, Defence 65",g:"Chambers of Xeric",r:"3 in 69 uniques per piece"}],
+["Dragon hunter crossbow","Drop",{l:"Ranged 70",g:"Chambers of Xeric",r:"4 in 69 uniques"}],
+["Avernic defender","Drop",{l:"Attack 70, Defence 70",q:"A Taste of Hope",g:"Avernic hilt from the Theatre of Blood on a dragon defender",r:"8 in 19 uniques"}],
+["Ghrazi rapier and sanguinesti staff","Drop",{l:"Attack 80, Magic 82",g:"Theatre of Blood",r:"2 in 19 uniques each"}],
+["Scythe of vitur","Drop",{l:"Attack 80, Strength 90",g:"Theatre of Blood, Verzik's chest",r:"1 in 19 uniques. A team sees a unique about 1 in 9.1 deathless raids, so ≈1/173 per raid for the team, split by contribution",m:"Charges: 300 blood runes and 1 vial of blood per 100 hits"}],
+["Torva armour","Drop",{l:"Defence 80, Smithing 90",q:"The Frozen Door miniquest",g:"Nex. Repair damaged pieces with bandosian components",r:"≈1/43 kills for a team unique, shared by contribution"}],
+["Zaryte crossbow","Drop",{l:"Ranged 80",g:"Nihil horn from Nex on an Armadyl crossbow"}],
+["Infernal cape","Minigame",{g:"The Inferno. Sacrifice a fire cape to enter",w:"Best melee cape.",h:"Deaths count."}],
+["Dizana's quiver","Minigame",{l:"Ranged 75",q:"Children of the Sun",g:"Fortis Colosseum, defeat Sol Heredit on wave 12",w:"Best ranged cape slot.",h:"Deaths count."}],
+["Oathplate armour","Drop",{l:"Defence 78",q:"A Kingdom Divided",g:"Yama, usually fought as a duo",w:"Best melee strength armour alongside Torva. Check the wiki for current rates."}],
+["Avernic treads and eye of ayak","Drop",{q:"The Final Dawn",g:"Doom of Mokhaiotl. Deeper delve levels improve the rolls",w:"Best-in-slot boots and a fast powered staff."}]]}
+];
+
+/* ---------- EARLY ROUTE ---------- */
+const ROUTE=[
+{t:"First days",p:"Safe XP from quests before any real combat, in the spirit of B0aty's bank-by-bank route.",n:[
+["Quest XP, no fighting","Quest",{g:"Waterfall Quest, Witch's House, Fight Arena, Tree Gnome Village, The Grand Tree, Vampyre Slayer",w:"Takes melee stats into the 30s and 40s using safespots and magic.",h:"Every one of these has a safespot or flinch spot. Use it."}],
+["Druidic Ritual","Quest",{w:"Unlocks Herblore."}],
+["Wintertodt at 10 Hitpoints","Minigame",{l:"Firemaking 50",g:"Damage scales with your Hitpoints level, so go before training combat. Wear four warm items",w:"Crates hold seeds, ores, herbs, logs and gems that fund the early account.",h:"Deaths count. Eat at half health and do not play on an unstable connection."}],
+["Client of Kourend and X Marks the Spot","Quest",{w:"Lamps and the Kourend teleports."}],
+["Agility to 30+","Skill",{g:"Gnome Stronghold, Draynor, then Varrock rooftops",w:"Marks toward graceful."}],
+["Bone Voyage","Quest",{l:"Varrock Museum kudos 100",w:"Fossil Island for birdhouses and seaweed."}],
+["Birdhouse runs","Skill",{l:"Hunter 5, Crafting 5",w:"Passive Hunter XP and nests for seeds and Saradomin brews."}],
+["Priest in Peril","Quest",{w:"Morytania, Barrows and the Slayer Tower."}],
+["Tithe Farm seed box","Minigame",{l:"Farming 34",c:"250 points"}],
+["Easy diaries","Diary",{g:"Ardougne, Lumbridge, Kourend, Varrock, Falador",w:"Cloak, ring, blessing and 15 daily battlestaves from Zaff."}],
+["43 Prayer before bossing","Skill",{l:"Prayer 43"}],
+["Easy combat tasks","Combat tasks",{g:"Ghommal's hilt 1",w:"Free Trollheim teleports and bonus Warriors' Guild tokens."}]]}
+];
+
+/* ---------- BOSSES ---------- */
+const D=["Safe","Low risk","Medium risk","High risk"];
+const BOSS=[
+{t:"Any time",p:"Minimal requirements and drops that matter straight away.",n:[
+["Brutus","Boss",{d:1,q:"The Ides of Milk",l:"Hitpoints 20",g:"Lumbridge cow field, instanced",r:"Mooleta 1/30; bottomless milk bucket 1/37.5; cow slippers 1/150; Beef pet 1/1,000",w:"Always drops bull bones (early Prayer) and a raw t-bone steak. Double combat XP and plenty of beginner clues.",h:"Max hit 19. Step out of the charge and keep food in the inventory."}],
+["Wintertodt","Skilling boss",{d:2,l:"Firemaking 50",g:"Northern Kourend",r:"Pyromancer pieces and bruma torch ≈1/150 a roll; tome of fire ≈1/1,000; dragon axe 1/10,000",w:"Supply crates for the whole early game.",h:"Deaths count. Go at 10 Hitpoints so the hits stay tiny."}],
+["Tempoross","Skilling boss",{d:0,l:"Fishing 35",g:"Ruins of Unkah, via Al Kharid",r:"Fish barrel and tackle box ≈1/400 per permit; tome of water ≈1/1,600; dragon harpoon 1/8,000",w:"Fish, a barrel that holds 28 extra fish, and spirit flakes.",h:"You cannot die here."}],
+["Obor","Boss",{d:1,l:"Prayer 43",g:"Giant key from hill giants (1/128), Edgeville Dungeon",r:"Hill giant club 1/118",w:"Strong crush weapon with no Attack requirement."}],
+["Bryophyta","Boss",{d:1,l:"Prayer 43",g:"Mossy key from moss giants, Varrock Sewers",r:"Bryophyta's essence 1/118",w:"Staff that stores nature runes."}],
+["Scurrius","Boss",{d:1,l:"Prayer 43",g:"Varrock Sewers, private instance",r:"Scurrius' spine 1/33",w:"Excellent combat XP and rat bone weapons.",h:"Dodge the falling ceiling and switch prayers; damage is low."}],
+["Giant Mole","Boss",{d:1,l:"Attack 60, Strength 60",g:"Under Falador Park. Falador hard diary adds the mole locator",w:"Claws and skins trade to Wyson for bird nests: seeds and brew secondaries.",h:"Protect from Melee blocks everything."}],
+["Deranged Archaeologist","Boss",{d:1,l:"Magic 50, Prayer 43",q:"Bone Voyage",g:"Fossil Island swamp",w:"Crystal keys, fossils and numulite.",h:"Run from the book special attack. It can hit very hard."}]]},
+{t:"Early to mid",p:"After 43 Prayer, the dragon scimitar and Iban's staff.",n:[
+["Barrows","Boss",{d:2,l:"Magic 50, Prayer 43",q:"Priest in Peril",g:"Morytania. Medium combat tasks remove prayer drain; Morytania hard gives 50% more runes",r:"≈1 in 15 chests for any piece",w:"Ahrim's, Karil's, Dharok's, Guthan's and stacks of death, chaos and blood runes.",h:"Dharok hits very hard at low health. Never fight him without prayer."}],
+["Hespori","Boss",{d:1,l:"Farming 65",g:"Farming Guild, grown from a seed",r:"Bottomless compost bucket 1/35",w:"Anima seeds and the bucket that doubles your compost."}],
+["Moons of Peril","Boss",{d:2,l:"Attack 70, Strength 70, Defence 70",q:"Perilous Moons",g:"Neypotzli, under Cam Torum",r:"≈1 in 19 chests for a unique",w:"Blood Moon, Eclipse and Blue Moon sets. Food and potions are gathered inside."}],
+["Royal Titans","Boss",{d:2,l:"Attack 70, Ranged 70, Magic 75",g:"Asgarnian Ice Dungeon, best as a duo",w:"Deadeye and Mystic Vigour prayer scrolls, the twinflame staff, giantsoul amulet."}],
+["Sarachnis","Boss",{d:1,l:"Attack 60, Strength 60, Defence 60",g:"Forthos Dungeon",r:"Sarachnis cudgel 1/384; giant egg sac 1/20",w:"Egg sacs give noted red spiders' eggs for super restores."}],
+["Amoxliatl","Boss",{d:1,l:"Attack 60, Strength 60",q:"The Heart of Darkness",g:"Twilight Temple",w:"Glacial temotli and a pendant of ates piece."}],
+["The Hueycoatl","Boss",{d:1,l:"Attack 60, Strength 60",q:"Children of the Sun",g:"Darkfrost, group boss",w:"Dragon hunter wand, Hueycoatl hide armour, tome of earth."}],
+["Shellbane Gryphon","Boss",{d:1,l:"Slayer 51, Sailing 45, Attack 65",q:"Troubled Tortugans",g:"Reached by ship",w:"Belle's folly."}],
+["Skotizo","Boss",{d:1,l:"Attack 75, Strength 75, Defence 70",g:"Dark totem from the Catacombs of Kourend",w:"Guaranteed hard clue, ancient shards for Arclight."}],
+["King Black Dragon","Boss",{d:3,l:"Ranged 65",g:"Lever in level 42 Wilderness",r:"Dragon pickaxe 1/1,000; draconic visage 1/5,000",w:"Dragon bones and black dragonhide.",h:"The boss is easy but the lever is in the Wilderness. A PKer kill ends hardcore status."}],
+["Fight Caves: TzTok-Jad","Boss",{d:2,l:"Ranged 70, Defence 70, Prayer 43",g:"Mor Ul Rek",w:"Fire cape.",h:"Deaths count. One missed prayer on Jad is fatal."}]]},
+{t:"Mid to late",p:"Slayer bosses and the fights that supply late-game gear.",n:[
+["Dagannoth Kings","Boss",{d:2,l:"Attack 70, Ranged 70, Magic 60",q:"The Fremennik Trials",g:"Waterbirth Island. Rex alone can be safespotted with magic",r:"Berserker, archers and seers rings 1/128; dragon axe 1/128 per king",w:"Fremennik elite diary notes the dagannoth bones."}],
+["Kraken","Boss",{d:0,l:"Slayer 87, Magic 75",g:"Kraken Cove, on task only",r:"Trident of the seas 1/512; kraken tentacle 1/400",h:"About the safest boss in the game."}],
+["Thermonuclear smoke devil","Boss",{d:1,l:"Slayer 93",g:"Smoke Devil Dungeon, on task",r:"Occult necklace 1/350; smoke battlestaff 1/512"}],
+["Grotesque Guardians","Boss",{d:2,l:"Slayer 75",g:"Slayer Tower roof. Brittle key from gargoyles on task, 1/150",r:"Black tourmaline core 1/1,000",w:"Granite dust for granite cannonballs, guardian boots."}],
+["Zalcano","Skilling boss",{d:1,l:"Mining 70, Smithing 70",q:"Song of the Elves",g:"Prifddinas",r:"Crystal tool seed 1/200",w:"Ores, bars, runes, onyx bolt tips and crystal shards."}],
+["Zulrah","Boss",{d:3,l:"Ranged 75, Magic 75",q:"Regicide",g:"Zul-Andra",r:"Tanzanite fang, magic fang, serpentine visage, uncut onyx: each 1/1,024 per roll, two rolls a kill",w:"Blowpipe plus scales, dragon bolt tips, snakeskin, logs and runes.",h:"Venom and stacked hits kill fast. Learn all four rotations first."}],
+["Vorkath","Boss",{d:2,l:"Ranged 80, Defence 70",q:"Dragon Slayer II",g:"Ungael",r:"Head guaranteed at 50 kills; dragonbone necklace 1/1,000; visages 1/5,000 each",w:"Two superior dragon bones every kill and the assembler head.",h:"The vertical fireball one-shots if you stand still."}],
+["Demonic gorillas","Slayer",{d:2,l:"Attack 75, Ranged 75",q:"Monkey Madness II",g:"Crash site cavern",r:"Zenyte shard 1/300",h:"Prayer switching under pressure. Bring an escape teleport."}],
+["Tormented Demons","Slayer",{d:2,l:"Attack 75, Ranged 75",q:"While Guthix Sleeps",r:"Tormented synapse and burning claw ≈1/500 each"}],
+["Corrupted Gauntlet","Boss",{d:3,l:"Ranged 80, Magic 80, Prayer 77",q:"Song of the Elves",g:"Prifddinas. Gear is made inside, so your bank does not matter",r:"Enhanced crystal weapon seed 1/400; armour seed 1/50",w:"Bow of Faerdhinn, crystal armour and crystal shards.",h:"Deaths count. Most hardcores do dozens of normal Gauntlets first."}],
+["God Wars Dungeon","Boss",{d:2,l:"Strength 70, Ranged 70, Agility 70, Hitpoints 70",q:"Troll Stronghold",g:"Graardor (Bandos), Kree'arra (Armadyl), Zilyana (Armadyl crossbow), K'ril (Zamorakian spear). Ghommal's hilt 2 and up teleports here",r:"Armour pieces 1/381; crossbow and hilts 1/508",w:"Solo methods with the Bow of Faerdhinn exist for all four."}],
+["Cerberus","Boss",{d:2,l:"Slayer 91",g:"Taverley Dungeon, on task",r:"Primordial, pegasian, eternal crystals 1/512 each"}],
+["Araxxor","Boss",{d:2,l:"Slayer 92",g:"Morytania spider cave, on task",r:"Araxyte fang ≈1/600",w:"Noxious halberd and amulet of rancour."}],
+["Alchemical Hydra","Boss",{d:2,l:"Slayer 95",g:"Karuulm Slayer Dungeon, on task",r:"Hydra's claw 1/1,001; leather 1/514; ring pieces 1/180",w:"Dragon hunter lance, ferocious gloves, brimstone ring."}],
+["Phantom Muspah","Boss",{d:2,l:"Ranged 80, Magic 80",q:"Secrets of the North",r:"Venator shard 1/100",w:"Ancient essence for the ancient sceptre and steady supplies."}]]},
+{t:"End game",p:"Raids and best-in-slot bosses.",n:[
+["Tombs of Amascut","Raid",{d:3,q:"Beneath Cursed Sands",g:"Necropolis. Invocations set the difficulty, so entry raids suit mid-level gear",r:"Of 24 unique weights: fang 7, lightbearer 7, Elidinis' ward 3, masori 2 per piece, shadow 1",h:"Raid deaths count."}],
+["Chambers of Xeric","Raid",{d:3,g:"Mount Quidamortem. Solo or team",r:"About 1% unique chance per 8,676 points. Of 69 weights: prayer scrolls 20 each, dragon hunter crossbow 4, buckler 4, ancestral 3 per piece, claws 3, bulwark 3, elder maul 2, kodai 2, twisted bow 2",h:"Raid deaths count."}],
+["Theatre of Blood","Raid",{d:3,q:"A Taste of Hope",g:"Ver Sinhaza, team raid",r:"Team unique about 1 in 9.1 deathless raids. Of 19 weights: avernic hilt 8, rapier 2, sanguinesti 2, justiciar 2 per piece, scythe 1",h:"Raid deaths count."}],
+["Desert Treasure II bosses","Boss",{d:3,q:"Desert Treasure II",g:"Duke Sucellus, The Leviathan, The Whisperer, Vardorvis",w:"Vestiges for the best rings, virtus robes, soulreaper axe pieces."}],
+["Nex","Boss",{d:3,l:"Ranged 90, Defence 85",q:"The Frozen Door",g:"Ancient Prison, God Wars Dungeon, team boss",r:"≈1/43 kills for a team unique",w:"Torva, zaryte vambraces, nihil horn, ancient hilt."}],
+["Yama","Boss",{d:3,q:"A Kingdom Divided",g:"Chasm of Fire, usually a duo",w:"Oathplate armour and the soulflame horn."}],
+["Doom of Mokhaiotl","Boss",{d:3,q:"The Final Dawn",g:"Tonali Cavern. Each delve level deeper is harder and better",w:"Avernic treads, eye of ayak, Mokhaiotl cloth for confliction gauntlets."}],
+["Fortis Colosseum","Minigame",{d:3,q:"Children of the Sun",g:"Civitas illa Fortis, 12 waves",w:"Dizana's quiver, sunfire fanatic armour, tonalztics of ralos."}],
+["The Inferno","Minigame",{d:3,g:"Mor Ul Rek, 69 waves",w:"Infernal cape."}],
+["Wilderness bosses","Boss",{d:3,g:"Artio, Calvar'ion and Spindel are the singles versions",w:"Voidwaker pieces, dragon pickaxe, rings to imbue.",h:"PKers hunt these caves. Most hardcores never go."}]]}
+];
+
+/* ---------- SKILLS: [level, name, tag, details] ---------- */
+const S={
+Attack:[[1,"Quest XP to 30","Quest",{g:"Waterfall Quest, Fight Arena, Tree Gnome Village, Vampyre Slayer"}],[30,"Adamant scimitar","Quest",{q:"The Feud"}],[40,"Rune weapons","Shop",{}],[50,"Iban's staff","Quest",{l:"Magic 50",q:"Underground Pass"}],[60,"Dragon scimitar","Quest",{q:"Monkey Madness I",c:"100,000 gp"}],[65,"Zombie axe","Drop",{l:"Smithing 70",q:"Defender of Varrock",r:"≈1/600"}],[65,"Warriors' Guild","Unlock",{l:"Strength 65",g:"130 combined Attack and Strength",w:"Dragon defender, 1/100 in the basement."}],[70,"Abyssal whip and Barrows","Drop",{l:"Slayer 85",r:"Whip 1/512"}],[70,"Nightmare Zone","Minigame",{g:"Five quest bosses unlocked; Dream Mentor helps",c:"Imbues: rings 650,000, salve 800,000, slayer helm 1,250,000 points. Absorptions 1,000 a dose",w:"AFK combat XP and imbues.",h:"Deaths here are safe."}],[75,"Arclight","Craft",{q:"Shadow of the Storm",m:"3 ancient shards"}],[78,"Dragon hunter lance","Drop",{l:"Slayer 95"}],[80,"Ghrazi rapier and scythe","Drop",{g:"Theatre of Blood"}],[82,"Osmumten's fang","Drop",{g:"Tombs of Amascut"}]],
+Strength:[[1,"Amulet of strength","Craft",{l:"Crafting 50, Magic 49"}],[1,"Climbing boots","Shop",{q:"Death Plateau"}],[40,"Fighter torso","Minigame",{l:"Defence 40",c:"375 honour points in each role plus a Queen kill"}],[60,"Dragon warhammer","Drop",{r:"1/3,000 from lizardman shamans"}],[65,"Dragon defender","Drop",{l:"Attack 65",r:"1/100"}],[70,"Dharok's at Nightmare Zone","Drop",{l:"Attack 70, Defence 70",w:"Fastest AFK melee XP at 1 hitpoint with absorptions."}],[70,"God Wars: Bandos door","Unlock",{w:"Strength 70 to enter Graardor's stronghold."}],[75,"Blood Moon set","Drop",{l:"Defence 50",q:"Perilous Moons"}],[80,"Berserker ring (i)","Drop",{r:"1/128 from Rex",c:"650,000 Nightmare Zone points"}],[90,"Scythe of vitur","Drop",{l:"Attack 80"}]],
+Defence:[[20,"Mystic robes","Shop",{l:"Magic 40"}],[40,"Rune armour and d'hide bodies","Shop",{q:"Dragon Slayer I"}],[42,"Void Knight set","Minigame",{c:"850 Pest Control points with one helm",l:"Attack 42, Strength 42, Hitpoints 42, Ranged 42, Magic 42, Prayer 22"}],[45,"Berserker helm","Shop",{q:"The Fremennik Trials",c:"78,000 gp"}],[50,"Moons of Peril armour","Drop",{q:"Perilous Moons"}],[55,"Helm of Neitiznot","Quest",{q:"The Fremennik Isles"}],[60,"Dragon armour and boots","Drop",{l:"Slayer 83",r:"Boots 1/128"}],[65,"Bandos armour","Drop",{r:"1/381 per piece"}],[70,"Barrows, Piety, crystal armour","Unlock",{l:"Prayer 70",q:"King's Ransom"}],[75,"Dragonfire shield","Craft",{l:"Smithing 90",g:"Draconic visage, 1/5,000 from Vorkath and others. Oziach forges it for 1,250,000 gp"}],[78,"Oathplate","Drop",{g:"Yama"}],[80,"Torva and ferocious gloves","Drop",{}]],
+Hitpoints:[[10,"Wintertodt first","Minigame",{l:"Firemaking 50",w:"Damage scales with Hitpoints, so do the Firemaking grind before combat.",h:"Deaths count."}],[20,"Brutus","Boss",{q:"The Ides of Milk"}],[42,"Void requirement","Minigame",{}],[50,"Regen bracelet and food tiers","Unlock",{g:"Karambwans at Cooking 30 and Fishing 65 are the combo food to bank"}],[70,"God Wars and Jad comfort","Unlock",{w:"70 Hitpoints is the usual floor for God Wars and the Fight Caves.",h:"More Hitpoints is the cheapest insurance a hardcore has."}],[80,"Saradomin brews","Craft",{l:"Herblore 81",m:"Toadflax and crushed nests"}],[90,"Raids and Inferno","Unlock",{h:"Most hardcore deaths here come from stacked damage at high health, so do not go in under-levelled."}]],
+Ranged:[[1,"Iron knives or darts","Craft",{l:"Smithing 22",q:"The Tourist Trap for darts"}],[28,"Dorgeshuun crossbow","Shop",{q:"The Lost Tribe"}],[30,"Ava's attractor","Quest",{q:"Animal Magnetism",l:"Slayer 18, Crafting 19, Woodcutting 35"}],[40,"Green d'hide","Craft",{l:"Crafting 63, Defence 40"}],[42,"Void Knight set","Minigame",{c:"850 Pest Control points"}],[50,"Ava's accumulator, magic shortbow","Quest",{l:"Fletching 80",c:"75 steel arrows"}],[55,"Dwarf multicannon","Quest",{q:"Dwarf Cannon",l:"Smithing 35",c:"750,000 gp for the parts",w:"Fast Slayer. Medium combat tasks raise the cannonball cap to 35."}],[61,"Rune crossbow and broad bolts","Unlock",{l:"Slayer 55, Fletching 55",c:"300 Slayer points"}],[66,"Hunters' sunlight crossbow","Craft",{l:"Hunter 72, Fletching 74"}],[70,"Black d'hide, Karil's, crystal bow","Drop",{l:"Defence 70"}],[75,"Toxic blowpipe and Eclipse atlatl","Drop",{l:"Fletching 78",r:"Fang 1/1,024 per roll"}],[80,"Bow of Faerdhinn","Drop",{l:"Agility 70",r:"1/400 Corrupted Gauntlets"}],[80,"Chinning in the MM2 tunnels","Unlock",{l:"Hunter 63",q:"Monkey Madness II",w:"Fastest Ranged XP with red chinchompas."}],[85,"Twisted bow","Drop",{r:"2 in 69 Chambers uniques"}]],
+Prayer:[[1,"Bull bones","Drop",{q:"The Ides of Milk",g:"Brutus drops one every kill",w:"Better than big bones and available on day one."}],[25,"Protect Item and early buffs","Unlock",{}],[43,"Protection prayers","Unlock",{w:"The single biggest safety upgrade on a hardcore."}],[45,"Blessed bone shards","Unlock",{q:"Children of the Sun",g:"Break bones into shards and offer them with sunfire wine at Ralos' Rise",w:"Strong Prayer XP per bone without a house or the Wilderness."}],[55,"Preserve","Drop",{g:"Torn prayer scroll, Chambers of Xeric"}],[62,"Deadeye and Mystic Vigour","Drop",{g:"Royal Titans. Mystic Vigour at 63"}],[70,"Piety","Unlock",{l:"Defence 70",q:"King's Ransom, Knight Waves"}],[70,"Gilded altar","Unlock",{l:"Construction 75",m:"2 marble blocks, 2 cloth, 4 gold leaf",w:"350% XP with both burners lit."}],[74,"Rigour","Drop",{l:"Defence 70",r:"20 in 69 Chambers uniques"}],[77,"Augury","Drop",{l:"Defence 70",r:"20 in 69 Chambers uniques"}],[80,"Bonecrusher and dragonbone necklace","Diary",{g:"Morytania hard diary; necklace 1/1,000 from Vorkath",w:"Restores prayer as bones are crushed."}],[1,"Chaos altar","Unlock",{g:"Level 38 Wilderness, 50% chance to keep each bone",h:"The fastest Prayer in the game and a PKer hotspot. Not for a hardcore."}]],
+Magic:[[1,"Strike spells and safespots","Skill",{w:"Safest early combat training on a hardcore."}],[33,"Telekinetic Grab","Unlock",{w:"Wines of Zamorak for ranging potions."}],[43,"Superheat Item","Unlock",{}],[49,"Lvl-3 Enchant","Unlock",{w:"Amulet of strength and ruby bolts (e)."}],[50,"Iban Blast","Quest",{q:"Underground Pass"}],[55,"High Level Alchemy","Unlock",{g:"Alch battlestaves from Zaff's daily stock"}],[60,"Mage Arena I","Minigame",{h:"Level 56 Wilderness."}],[60,"Mage Training Arena","Minigame",{c:"Bones to Peaches: 200 telekinetic, 300 alchemist, 2,000 enchantment, 200 graveyard points. Mage's book: 500, 550, 6,000, 500",w:"Infinity boots become eternal boots later.",h:"Safe."}],[65,"Lunar spellbook","Quest",{q:"Lunar Diplomacy",l:"Crafting 61, Defence 40, Firemaking 49, Herblore 5, Mining 60, Woodcutting 55",w:"NPC Contact at 67, Humidify 68, Superglass Make 77, Fertile Soil 83, Plank Make 86."}],[66,"Wizards' Guild","Shop",{w:"Mystic robes and rune shop."}],[70,"Ice Burst","Quest",{q:"Desert Treasure I",w:"Bursting dust devils and nechryael for Slayer and Magic XP."}],[75,"Trident of the seas","Drop",{l:"Slayer 87",r:"1/512"}],[76,"Greater thralls","Quest",{q:"A Kingdom Divided"}],[77,"Superglass Make","Unlock",{m:"Giant seaweed and buckets of sand",w:"Fastest Crafting for an iron."}],[80,"Death Charge","Unlock",{q:"A Kingdom Divided"}],[87,"Lvl-6 Enchant","Unlock",{w:"Amulet of fury and onyx bolts (e)."}],[93,"Lvl-7 Enchant","Unlock",{w:"Zenyte jewellery."}],[94,"Ice Barrage and Vengeance","Unlock",{}]],
+Runecraft:[[1,"Quest XP","Quest",{g:"The Eyes of Glouphrie, The Ascent of Arceuus, Enter the Abyss miniquest"}],[23,"Lava runes","Skill",{m:"Binding necklaces, earth talisman, Magic Imbue at Magic 82",w:"Fast XP if you want it."}],[27,"Guardians of the Rift","Minigame",{q:"Temple of the Eye",c:"Raiments of the Eye ≈1,350 abyssal pearls for the set (hat 400, top 350, bottom 350, boots 250). Abyssal lantern 1,500, ring of the elements 400",r:"Abyssal needle 1/300 from the rift",w:"Runes of every type and the outfit that gives up to 60% more runes."}],[44,"Nature runes","Unlock",{g:"Abyss or the Karamja altar"}],[54,"Law runes","Unlock",{}],[60,"Boot crystals","Unlock",{l:"Magic 60",w:"Needed to attach Cerberus crystals."}],[65,"Death runes","Quest",{q:"Mourning's End Part II"}],[75,"Giant pouch","Drop",{g:"Abyssal creatures",w:"Medium at 25, large at 50."}],[77,"Blood runes","Quest",{q:"Sins of the Father for the true altar",w:"Scythe, sanguinesti and blood spell charges."}],[85,"Colossal pouch","Craft",{l:"Crafting 56",g:"Abyssal needle on your pouches"}],[90,"Soul runes","Unlock",{g:"Dark Altar route, Arceuus"}],[95,"Wrath runes","Quest",{q:"Dragon Slayer II"}]],
+Construction:[[1,"Mahogany Homes","Minigame",{c:"Carpenter's outfit 2,000 points: helmet 400, shirt 800, trousers 600, boots 200. Amy's saw 500, plank sack 350",w:"Cheapest planks-to-XP ratio and a 2.5% XP outfit."}],[40,"Butler","Unlock",{w:"Demon butler at 50."}],[47,"Mounted glory","Unlock",{}],[50,"Portal chamber and lectern","Unlock",{}],[55,"Armour stand","Unlock",{w:"Free Barrows repairs scaled by Smithing."}],[65,"Restoration pool","Unlock",{w:"Revitalisation 70, rejuvenation 80, fancy 85."}],[72,"Portal nexus","Unlock",{}],[75,"Gilded altar and spirit tree","Unlock",{l:"Farming 83"}],[81,"Jewellery box","Unlock",{w:"Fancy at 86, ornate at 91. All boostable."}],[84,"Crafting table and spice rack boosts","Unlock",{g:"Crystal saw +3 (The Eyes of Glouphrie), spicy stew up to +5, tea +3",w:"Plan boosts so 82 or 83 real levels reach the ornate pool."}],[85,"Fairy ring","Unlock",{}],[90,"Ornate pool and occult altar","Unlock",{m:"Pool: 5 anti-venom(4) on a fancy pool. Altar: all four spellbooks",w:"Full restore after every boss trip."}]],
+Agility:[[1,"Gnome Stronghold course","Skill",{}],[10,"Graceful","Minigame",{c:"260 marks of grace"}],[30,"Varrock, Canifis rooftops","Skill",{w:"Canifis at 40 has the best mark rate for a long while."}],[48,"Recipe for Disaster requirement","Quest",{}],[50,"Colossal Wyrm course","Skill",{q:"Children of the Sun",g:"Varlamore",w:"Termites trade for amylase and bone shards."}],[52,"Hallowed Sepulchre","Minigame",{q:"Sins of the Father",c:"Ring of endurance 250 hallowed marks; dark dye and acorn extra",w:"Best Agility XP from 72 or so, with no damage taken."}],[60,"Seers' Village rooftop","Skill",{g:"Kandarin hard diary adds a teleport next to the start"}],[70,"God Wars shortcuts and crystal armour","Unlock",{w:"Saradomin's Encampment needs 70. Bow of Faerdhinn needs 70."}],[77,"Stamina potions","Craft",{l:"Herblore 77",m:"Super energy plus amylase crystal, 10 per mark of grace"}],[80,"Useful shortcuts","Unlock",{g:"Taverley Dungeon floor 70 and 80, Slayer Tower chains 61 and 71"}]],
+Herblore:[[3,"Druidic Ritual","Quest",{w:"Unlocks the skill. Attack potions: guam and eye of newt."}],[12,"Quest XP","Quest",{g:"Jungle Potion, Recruitment Drive, The Dig Site, Heroes' Quest, Shades of Mort'ton"}],[25,"Herb sack","Unlock",{l:"Slayer 58",c:"750 Slayer points or 250 Tithe Farm points"}],[38,"Prayer potions","Craft",{m:"Ranarr and snape grass",g:"Ranarr at Farming 32. Snape grass spawns on Waterbirth Island or grows at Farming 61",w:"The potion every early boss runs on."}],[45,"Super attack","Craft",{m:"Irit (Farming 44) and eye of newt"}],[55,"Super strength","Craft",{m:"Kwuarm (Farming 56) and limpwurt root (Farming 26)"}],[60,"Mastering Mixology","Minigame",{g:"Aldarin. Paste from spare herbs",c:"Rewards cost Mox, Aga and Lye resin: prescription goggles, alchemist's amulet, reagent pouch, chugging barrel, potion packs. Check the wiki for current prices",w:"Herblore XP from herbs you would not otherwise use."}],[60,"Potion storage","Unlock",{g:"Bank feature",w:"Stores doses in one slot and frees dozens of bank spaces."}],[63,"Super restore","Craft",{m:"Snapdragon (Farming 62) and red spiders' eggs",g:"Eggs: Sarachnis egg sacs, Tower of Life, Edgeville Dungeon spawns"}],[66,"Super defence","Craft",{m:"Cadantine (Farming 67) and white berries (Farming 59)"}],[69,"Antifire","Craft",{m:"Lantadyme and dragon scale dust"}],[70,"Divine potions","Unlock",{q:"Song of the Elves",m:"Crystal dust"}],[72,"Ranging potion","Craft",{m:"Dwarf weed (Farming 79) and wine of zamorak"}],[76,"Magic potion","Craft",{m:"Lantadyme (Farming 73) and potato cactus (Farming 64)"}],[77,"Stamina potion","Craft",{m:"Super energy and amylase"}],[81,"Saradomin brew","Craft",{m:"Toadflax (Farming 38) and crushed nest",g:"Nests from birdhouses, Giant Mole and Wintertodt"}],[87,"Antidote++ and anti-venom","Craft",{m:"Zulrah's scales for anti-venom",w:"Needed for the ornate pool."}],[90,"Super combat","Craft",{m:"Torstol (Farming 85) plus super attack, strength and defence",w:"Boostable from 85 with a botanical pie and others."}],[92,"Super antifire","Craft",{m:"Antifire and crushed superior dragon bones"}]],
+Thieving:[[5,"Tea and cake stalls","Skill",{}],[21,"Pyramid Plunder","Minigame",{g:"Sophanem",w:"Pharaoh's sceptre and fast XP from 71 on.",h:"Mummies and scarabs can hit. Bring food and antipoison."}],[25,"Fruit stalls","Skill",{g:"Hosidius. Safe XP to 45 or 55"}],[30,"The Feud","Quest",{w:"Blackjacking at 45 and the adamant scimitar."}],[38,"Master farmers","Skill",{w:"Ranarr and snapdragon seeds. Ardougne medium diary and the rogue outfit help."}],[50,"Rogue outfit","Minigame",{l:"Agility 50",g:"Rogues' Den maze",w:"Double loot when pickpocketing.",h:"The maze is safe."}],[53,"Quest requirements","Quest",{w:"Desert Treasure I and Recipe for Disaster."}],[55,"Ardougne knights","Skill",{g:"Ardougne medium diary gives 10% better success in Ardougne"}],[49,"Stealing artefacts","Minigame",{g:"Port Piscarilius"}],[65,"Sorceress's Garden","Minigame",{l:"Farming 25",w:"Sq'irk juice and herbs."}],[82,"Vyres","Skill",{q:"Sins of the Father",r:"Blood shard 1/5,000",w:"Amulet of blood fury."}],[85,"Elves","Skill",{q:"Song of the Elves",w:"Crystal shards and enhanced teleport seeds."}]],
+Crafting:[[1,"Leather and quest XP","Quest",{}],[5,"Birdhouses","Skill",{l:"Hunter 5",q:"Bone Voyage"}],[35,"Sandstone for glass","Skill",{l:"Mining 35",g:"Desert Quarry, then the sandstone grinder for buckets of sand"}],[46,"Glassblowing","Skill",{m:"Molten glass. Giant seaweed from the underwater patches, Farming 23",w:"Main iron training to the 80s."}],[50,"Amulet of strength","Craft",{l:"Magic 49"}],[54,"Battlestaves","Skill",{g:"Zaff sells 15, 30, 60 or 120 a day by Varrock diary tier",w:"Water 54, earth 58, fire 62, air 66."}],[55,"Slayer helmet","Craft",{c:"400 Slayer points"}],[57,"Dragonhide","Craft",{w:"Green body at 63, black body at 84."}],[70,"Amulet of power and crystal singing","Craft",{}],[75,"Slayer rings","Unlock",{c:"300 Slayer points"}],[80,"Amulet of glory","Craft",{l:"Magic 68"}],[82,"Bow of Faerdhinn","Craft",{l:"Smithing 82",m:"Enhanced weapon seed and 100 crystal shards"}],[89,"Zenyte jewellery","Craft",{w:"Ring 89, bracelet 95, amulets 98."}],[90,"Amulet of fury","Craft",{m:"Onyx: 300,000 tokkul or Zulrah"}]],
+Fletching:[[1,"Arrow shafts and headless arrows","Skill",{}],[10,"Darts","Skill",{q:"The Tourist Trap",w:"Fast XP and blowpipe ammo. Mithril 52, adamant 67, rune 81, amethyst 90, dragon 95."}],[20,"Vale Totems","Minigame",{g:"Auburnvale",w:"Fletching XP from logs with knife and bowstring rewards. Check the wiki for point costs."}],[55,"Broad bolts","Unlock",{l:"Slayer 55",c:"300 Slayer points"}],[69,"Rune crossbow","Craft",{l:"Smithing 91"}],[74,"Hunters' sunlight crossbow","Craft",{l:"Hunter 72"}],[78,"Toxic blowpipe","Craft",{g:"Chisel on a tanzanite fang"}],[80,"Magic shortbow","Craft",{}],[82,"Amethyst arrows","Craft",{l:"Mining 92"}],[84,"Dragon bolts and ruby/diamond tips","Craft",{}]],
+Slayer:[[1,"Turael, then Vannaka","Skill",{g:"Vannaka at combat 40, Chaeldar at 70 (Lost City), Konar at 75, Nieve at 85, Duradel at 100 with Slayer 50"}],[10,"Points plan","Unlock",{c:"Broader Fletching 300, slayer helmet 400, rune pouch 750, herb sack 750, Bigger and Badder 150, slayer rings 300",w:"Every 10th task pays bonus points, so use the best master you can on those."}],[55,"Broad bolts","Unlock",{}],[58,"Cave horrors","Slayer",{q:"Cabin Fever",r:"Black mask 1/512"}],[72,"Skeletal wyverns","Slayer",{w:"Granite legs and good alchables."}],[75,"Gargoyles and Grotesque Guardians","Slayer",{}],[77,"Brutal black dragons","Slayer",{}],[80,"Nechryael and dust devil bursting","Slayer",{l:"Magic 70"}],[83,"Spiritual mages","Slayer",{r:"Dragon boots 1/128"}],[85,"Abyssal demons","Slayer",{r:"Whip 1/512"}],[87,"Kraken","Boss",{r:"Trident 1/512"}],[91,"Cerberus","Boss",{}],[92,"Araxytes and Araxxor","Boss",{}],[93,"Smoke devils","Slayer",{r:"Occult 1/350"}],[95,"Alchemical Hydra","Boss",{}],[1,"Wilderness Slayer","Unlock",{g:"Krystilia",h:"Great loot, constant PKers. Skip on a hardcore."}]],
+Hunter:[[5,"Birdhouse runs","Skill",{l:"Crafting 5",q:"Bone Voyage",w:"Passive XP every 50 minutes and bird nests."}],[9,"Varrock Museum quiz","Quest",{w:"Free Hunter and Slayer XP to level 9."}],[35,"Aerial fishing","Skill",{l:"Fishing 43",w:"Molch pearls for the angler outfit and fish sack."}],[44,"Drift net fishing","Skill",{l:"Fishing 47",q:"Bone Voyage"}],[46,"Hunters' Rumours","Minigame",{g:"Hunter Guild, Varlamore",w:"Loot sacks, the guild hunter outfit and quetzal whistle upgrades."}],[63,"Red chinchompas","Skill",{w:"Ranged training ammo."}],[72,"Sunlight antelopes","Skill",{w:"Antlers for the sunlight crossbow and bolts."}],[75,"Moonlight moths","Skill",{w:"Prayer restore in a jar, useful where potions run short."}],[80,"Herbiboar","Skill",{l:"Herblore 31",q:"Bone Voyage",w:"Herbs and fossils. Magic secateurs add herbs."}],[83,"Dragon implings","Skill",{}]],
+Mining:[[1,"Copper to iron","Skill",{}],[30,"Motherlode Mine","Minigame",{c:"Prospector kit 180 golden nuggets. Coal bag 100, gem bag 100, upper floor 100 (Mining 72), bigger sack 200",w:"2.5% XP outfit and the coal bag for Blast Furnace."}],[35,"Sandstone","Skill",{g:"Desert Quarry",w:"Buckets of sand for glass."}],[40,"Gem rocks","Skill",{q:"Shilo Village",w:"Gems for Crafting and bolt tips. Karamja gloves 3 reach the underground mine."}],[10,"Shooting stars","Skill",{c:"Celestial ring 2,000 stardust",w:"AFK and safe. Ring gives an invisible +4 Mining."}],[50,"Volcanic Mine","Minigame",{q:"Bone Voyage",w:"Fast XP.",h:"Real damage and deaths count."}],[60,"Mining Guild","Unlock",{}],[70,"Zalcano","Skilling boss",{l:"Smithing 70",q:"Song of the Elves"}],[72,"Calcified rocks","Skill",{q:"Perilous Moons",w:"Blessed bone shards for Prayer."}],[85,"Runite","Skill",{}],[92,"Amethyst","Skill",{w:"Darts, arrows and bolt tips."}],[61,"Dragon pickaxe","Drop",{r:"1/1,000 from King Black Dragon"}]],
+Smithing:[[1,"The Knight's Sword","Quest",{l:"Mining 10",w:"12,725 XP, level 1 to 29."}],[15,"Giants' Foundry","Minigame",{q:"Sleeping Giants",c:"Smiths' uniform and the double ammo mould are bought with Foundry reputation. Check the wiki for prices",w:"Best XP per bar. The mould doubles cannonball speed."}],[30,"Blast Furnace","Minigame",{g:"Keldagrim. No fee from Smithing 60",w:"Bars for half the coal. Bring the coal bag and ice gloves."}],[35,"Cannonballs","Craft",{q:"Dwarf Cannon"}],[40,"Gold bars with goldsmith gauntlets","Skill",{q:"Family Crest",w:"Fastest Smithing XP."}],[70,"Zombie axe repair","Craft",{}],[74,"Crystal armour","Craft",{l:"Crafting 74"}],[82,"Bow of Faerdhinn","Craft",{l:"Crafting 82"}],[89,"Rune dart tips","Craft",{}],[90,"Dragonfire shield and Torva","Craft",{}]],
+Fishing:[[1,"Shrimp to trout","Skill",{g:"Fly fishing at 20"}],[35,"Tempoross","Skilling boss",{c:"Spirit angler: convert angler pieces with 1,200 spirit flakes each",w:"Safe XP, fish barrel, tackle box.",h:"You cannot die here."}],[1,"Angler outfit","Minigame",{l:"Fishing 15",g:"Fishing Trawler, Port Khazard",w:"2.5% XP.",h:"Safe."}],[48,"Barbarian fishing","Skill",{l:"Agility 15, Strength 15",g:"Otto's Grotto",w:"Passive Strength and Agility XP."}],[62,"Monkfish","Skill",{q:"Swan Song"}],[65,"Karambwans","Skill",{q:"Tai Bwo Wannai Trio",w:"Best combo food. Cook at Cooking 30."}],[76,"Sharks","Skill",{}],[80,"Infernal eels","Skill",{g:"Mor Ul Rek, fire cape needed",w:"Tokkul toward onyx."}],[82,"Anglerfish and minnows","Skill",{}],[87,"Sacred eels","Skill",{q:"Regicide",w:"Zulrah's scales."}],[91,"Marlin","Skill",{l:"Sailing 78"}]],
+Cooking:[[1,"Fish as you catch them","Skill",{}],[25,"Hosidius kitchen","Unlock",{w:"5% fewer burns, 10% with the Kourend elite diary."}],[30,"Karambwans","Skill",{q:"Tai Bwo Wannai Trio"}],[32,"Cooks' Guild","Unlock",{}],[35,"Jugs of wine","Skill",{m:"Grapes and jugs of water",w:"Fastest Cooking XP if you buy or grow grapes."}],[40,"Cooking gauntlets","Quest",{q:"Family Crest"}],[70,"Recipe for Disaster","Quest",{w:"70 Cooking is the gate on Barrows gloves."}],[80,"Sharks","Skill",{}],[84,"Anglerfish","Skill",{}],[85,"Wild and summer pies","Craft",{w:"Wild pie +5 Slayer, summer pie +5 Agility."}]],
+Firemaking:[[1,"Logs to 50","Skill",{}],[49,"Lunar Diplomacy requirement","Quest",{}],[50,"Wintertodt","Skilling boss",{c:"Pyromancer outfit and bruma torch ≈1/150 a roll each",w:"2.5% XP outfit, tome of fire, supply crates.",h:"Deaths count. Go at 10 Hitpoints."}],[50,"Desert Treasure I requirement","Quest",{}],[60,"Tome of fire","Drop",{r:"≈1/1,000 a roll",w:"50% more fire spell damage."}],[85,"Forestry campfires and redwoods","Skill",{}]],
+Woodcutting:[[1,"Forestry kit","Minigame",{g:"Freaky Forester's shop",c:"Anima-infused bark buys the forestry outfit, felling axe handle and log basket",w:"Events give Woodcutting XP and bark."}],[35,"Teaks","Skill",{w:"Fast XP and teak planks."}],[36,"Fairy ring requirement","Quest",{}],[50,"Mahogany","Skill",{w:"Construction planks."}],[60,"Woodcutting Guild","Unlock",{w:"Invisible +7 boost inside."}],[61,"Dragon axe","Drop",{r:"1/128 from each Dagannoth King"}],[65,"Sulliusceps","Skill",{q:"Bone Voyage",w:"Fast XP and mort myre fungi."}],[71,"Crystal axe","Craft",{q:"Song of the Elves",r:"Crystal tool seed 1/200 from Zalcano"}],[72,"Ironwood","Skill",{l:"Sailing 72"}],[90,"Redwoods","Skill",{}]],
+Farming:[[1,"Quest XP","Quest",{g:"Fairytale I, Recipe for Disaster: Goblin generals, My Arm's Big Adventure, Garden of Tranquillity"}],[15,"Tree runs","Skill",{w:"Oak 15, willow 30, maple 45, yew 60, magic 75. Fruit trees: papaya 57, palm 68, dragonfruit 81."}],[23,"Giant seaweed","Skill",{q:"Bone Voyage",w:"Glass for Crafting."}],[26,"Limpwurt and magic secateurs","Quest",{q:"Fairytale I",w:"10% more herbs."}],[32,"Ranarr","Skill",{w:"Prayer potions. Toadflax 38, irit 44, avantoe 50, kwuarm 56, snapdragon 62, cadantine 67, lantadyme 73, dwarf weed 79, torstol 85."}],[34,"Tithe Farm","Minigame",{c:"Seed box 250 points. Farmer's outfit 400: hat 75, torso 150, legs 125, boots 50. Gricoller's can 200, herb sack 250, auto-weed 50",w:"2.5% XP outfit and the seed box."}],[45,"Farming Guild contracts","Unlock",{w:"Seed packs. More tiers at 65 and 85."}],[55,"Hardwood patches","Skill",{q:"Bone Voyage",w:"Teak 35, mahogany 55."}],[61,"Snape grass","Skill",{w:"Prayer potion secondary."}],[64,"Potato cactus","Skill",{}],[65,"Hespori","Boss",{r:"Bottomless compost bucket 1/35"}],[72,"Calquat","Skill",{}],[83,"Spirit trees","Skill",{w:"Extra teleports and a house spirit tree."}],[85,"Celastrus","Skill",{w:"Battlestaves."}]],
+Sailing:[[1,"Pandemonium","Quest",{w:"Unlocks the skill and a raft. Start with courier tasks from Port Sarim."}],[7,"Two port tasks at once","Unlock",{}],[12,"Prying Times","Quest",{w:"Crowbar for sea charting."}],[15,"Skiff and salvaging","Unlock",{c:"15,000 gp",w:"Cargo hold and salvaging hook for AFK shipwreck salvage."}],[30,"Barracuda Trials","Minigame",{w:"Fast active XP. More trials open with helm and mast upgrades."}],[45,"Gryphons and camphor","Unlock",{l:"Slayer 51, Woodcutting 66",q:"Troubled Tortugans",w:"Shellbane Gryphon for Belle's folly."}],[55,"Mithril helm and wind catcher","Unlock",{}],[64,"Trawling","Skill",{w:"Halibut as combo food from 64 to 67."}],[72,"Ironwood and crystal extractor","Unlock",{l:"Construction 67"}],[78,"Marlin","Skill",{l:"Fishing 91",w:"Best single-bite food."}],[87,"Grimstone Island","Unlock",{w:"Double-speed cannonball smelting and frost dragons."}]]
+};
+
+/* ---------- pages ---------- */
+const slug=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+const PAGES={gear:{title:"Gear progression",intro:"One sequence for all three combat styles, in the order an iron usually unlocks it. Work left to right, top to bottom; skip what your account does not need.",stages:GEAR},
+ route:{title:"Early route",intro:"The first weeks of a hardcore account: quest XP and safe supplies before real combat.",stages:ROUTE},
+ bosses:{title:"Boss progression",intro:"Bosses in the order they become worth killing, with the drops that move the account and the hardcore risk of each.",stages:BOSS}};
+SK.forEach(k=>{PAGES[slug(k)]={title:k,skill:k,intro:"Unlocks, minigames, outfits and gear that matter for "+k+" on an iron account, by level.",
+  stages:[{t:k+" milestones",n:S[k].slice().sort((a,b)=>a[0]-b[0]).map(e=>[e[1],e[2],Object.assign({at:e[0]},e[3])])}]}});
+Object.entries(PAGES).forEach(([key,p])=>p.stages.forEach(st=>st.n=st.n.map(([name,tag,f])=>({id:key+":"+slug(name),name,tag,f,skill:p.skill}))));
+
+/* ---------- state ---------- */
+let store={st:{},lv:{}};
+try{const s=JSON.parse(localStorage.getItem("dv-prog")||"null");if(s&&s.st)store=s}catch(e){}
+const save=()=>{try{localStorage.setItem("dv-prog",JSON.stringify(store))}catch(e){}};
+const lvl=k=>store.lv[k]||(k==="Hitpoints"?10:1);
+const hasStats=()=>Object.keys(store.lv).length>0;
+function reqs(n){const out=[];const re=/([A-Z][a-z]+) (\d+)/g;let m;const s=n.f.l||"";
+  while((m=re.exec(s)))if(SK.includes(m[1]))out.push([m[1],+m[2]]);
+  if(n.skill&&n.f.at>1&&!out.some(r=>r[0]===n.skill))out.unshift([n.skill,n.f.at]);return out}
+const met=n=>reqs(n).every(([k,v])=>lvl(k)>=v);
+function count(p){let t=0,d=0;p.stages.forEach(s=>s.n.forEach(n=>{t++;if(store.st[n.id])d++}));return[d,t]}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---------- render ---------- */
+const nav=document.getElementById("nav"),main=document.getElementById("main"),tip=document.getElementById("tip");
+const canHover=matchMedia("(hover:hover) and (pointer:fine)").matches;
+let cur="gear",byId={};
+function nb(key,label){const[d,t]=PAGES[key]?count(PAGES[key]):[0,0];
+  return `<a class="nb${t&&d===t?" full":""}" href="#${key}" ${cur===key?'aria-current="page"':""}><span>${label}</span>${t?`<small>${d}/${t}</small>`:""}</a>`}
+function drawNav(){nav.innerHTML=`<div class="navgroup"><span class="navlabel">Charts</span>${nb("gear","Gear progression")}${nb("bosses","Bosses")}${nb("route","Early route")}</div>
+  <div class="navgroup skills"><span class="navlabel" style="grid-column:1/-1">Skills</span>${SK.map(k=>nb(slug(k),k)).join("")}</div>
+  <div class="navgroup"><span class="navlabel">Account</span><a class="nb" href="#stats" ${cur==="stats"?'aria-current="page"':""}><span>My stats and backup</span></a><a class="nb" href="#modes" ${cur==="modes"?'aria-current="page"':""}><span>Iron and hardcore rules</span></a></div>`}
+function boxHTML(n){const s=store.st[n.id];let c=s===1?" done":s===2?" skip":"";
+  if(!s&&hasStats()&&reqs(n).length)c+=met(n)?" ready":" locked";
+  return `<button class="box${c}" data-id="${n.id}"><span class="nm">${esc(n.name)}</span><span class="meta">${n.f.at?`<span class="lvl">Lv ${n.f.at}</span>`:""}<span>${n.tag}</span>${n.f.d>=2?`<span class="dg">${D[n.f.d]}</span>`:""}</span></button>`}
+function draw(){
+  const h=location.hash.slice(1);cur=PAGES[h]||h==="stats"||h==="modes"?h:"gear";drawNav();hideTip();
+  if(cur==="stats")return drawStats();if(cur==="modes")return drawModes();
+  const p=PAGES[cur],[d,t]=count(p);byId={};p.stages.forEach(s=>s.n.forEach(n=>byId[n.id]=n));
+  main.innerHTML=`<div class="head"><h2>${p.title}${p.skill&&hasStats()?` <small style="font-family:var(--body);font-weight:400;color:var(--muted)">level ${lvl(p.skill)}</small>`:""}</h2><p>${p.intro}</p>
+   <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="${t}" aria-valuenow="${d}"><i style="width:${t?d/t*100:0}%"></i></div>
+   <div class="legend"><span><b style="background:var(--done-bg);border-color:var(--done)"></b>Done</span><span><b style="background:var(--skip-bg);border-style:dashed"></b>Skipped</span>${hasStats()?`<span><b style="border-color:var(--ready);box-shadow:inset 3px 0 0 var(--ready)"></b>Levels met</span>`:`<span><a href="#stats">Enter your levels</a> to see what you can do now</span>`}<span>${canHover?"Click: done · Right-click or Shift+click: skip":"Tap a box for details"}</span></div></div>`+
+   p.stages.map(s=>`<section class="stage"><h3>${s.t}</h3>${s.p?`<p>${s.p}</p>`:""}<div class="flow">${s.n.map(boxHTML).join("")}</div></section>`).join("");
+}
+function setState(id,v){if(store.st[id]===v)delete store.st[id];else store.st[id]=v;save();
+  const el=main.querySelector(`[data-id="${CSS.escape(id)}"]`);if(el)el.outerHTML=boxHTML(byId[id]);
+  drawNav();const[d,t]=count(PAGES[cur]);const b=main.querySelector(".bar i");if(b)b.style.width=(t?d/t*100:0)+"%"}
+function tipHTML(n,sheet){const f=n.f,rows=[];const rq=reqs(n);
+  if(rq.length)rows.push(["Levels",rq.map(([k,v])=>hasStats()?`<span class="${lvl(k)>=v?"ok":"no"}">${k} ${v}${lvl(k)>=v?"":" (you: "+lvl(k)+")"}</span>`:`${k} ${v}`).join(", ")]);
+  ["q","c","g","m","r","w"].forEach(k=>{if(f[k])rows.push([L[k],esc(f[k])])});
+  if(f.d!==undefined)rows.push(["Risk",`<span class="${f.d>=2?"hcrow":""}">${D[f.d]}</span>`]);
+  if(f.h)rows.push(["Hardcore",`<span class="hcrow">${esc(f.h)}</span>`]);
+  const s=store.st[n.id];
+  return `<h3>${esc(n.name)}</h3><dl>${rows.map(r=>`<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join("")}</dl>`+
+   (sheet?`<div class="acts"><button class="btn pri" data-act="1">${s===1?"Undo done":"Mark done"}</button><button class="btn" data-act="2">${s===2?"Undo skip":"Skip"}</button><a class="btn" target="_blank" rel="noopener" href="https://oldschool.runescape.wiki/?search=${encodeURIComponent(n.name)}">Wiki</a><button class="btn" data-act="x">Close</button></div>`
+   :`<p class="hint">Click: done · Right-click or Shift+click: skip</p>`)}
+let open=null;
+function showTip(el){const n=byId[el.dataset.id];if(!n)return;open=n.id;tip.className="";tip.innerHTML=tipHTML(n,false);tip.hidden=false;
+  const r=el.getBoundingClientRect(),tw=tip.offsetWidth,th=tip.offsetHeight;
+  let x=r.left+scrollX,y=r.bottom+scrollY+6;x=Math.max(scrollX+8,Math.min(x,scrollX+innerWidth-tw-8));
+  if(r.bottom+th+12>innerHeight&&r.top-th-6>0)y=r.top+scrollY-th-6;tip.style.left=x+"px";tip.style.top=y+"px"}
+function showSheet(id){const n=byId[id];open=id;tip.className="sheet";tip.style.left=tip.style.top="";tip.innerHTML=tipHTML(n,true);tip.hidden=false}
+function hideTip(){tip.hidden=true;open=null}
+main.addEventListener("mouseover",e=>{const b=e.target.closest(".box");if(b&&canHover)showTip(b)});
+main.addEventListener("mouseout",e=>{if(canHover&&e.target.closest(".box"))hideTip()});
+main.addEventListener("focusin",e=>{const b=e.target.closest(".box");if(b&&canHover)showTip(b)});
+main.addEventListener("focusout",()=>{if(canHover)hideTip()});
+main.addEventListener("click",e=>{const b=e.target.closest(".box");if(!b)return;const id=b.dataset.id;
+  if(canHover){setState(id,e.shiftKey?2:1);const nb2=main.querySelector(`[data-id="${CSS.escape(id)}"]`);if(nb2){nb2.focus({preventScroll:true})}}else showSheet(id)});
+main.addEventListener("contextmenu",e=>{const b=e.target.closest(".box");if(b){e.preventDefault();setState(b.dataset.id,2)}});
+main.addEventListener("keydown",e=>{const b=e.target.closest&&e.target.closest(".box");if(b&&(e.key==="s"||e.key==="S")){setState(b.dataset.id,2);const n2=main.querySelector(`[data-id="${CSS.escape(b.dataset.id)}"]`);if(n2)n2.focus()}});
+tip.addEventListener("click",e=>{const a=e.target.closest("[data-act]");if(!a)return;const id=open;if(a.dataset.act==="x")return hideTip();setState(id,+a.dataset.act);showSheet(id)});
+
+function drawStats(){
+  main.innerHTML=`<div class="head"><h2>My stats and backup</h2><p>Import your character below, or type your levels in by hand. Boxes whose level requirements you meet get a blue edge, and tooltips show what is missing.</p></div>
+  <section class="stage"><h3>Look up a character</h3><p>The hiscores block direct lookups from other websites, so this takes one copy and paste. Type a name, open a link, copy everything on that page, paste it below and press Import. Hiscores fill levels and tick bosses with a kill count. WikiSync (needs the WikiSync plugin in RuneLite) also ticks quests and diaries.</p>
+   <div class="acts"><input id="lk-name" class="btn" style="cursor:text" aria-label="Character name" value="${esc(store.name||"")}" placeholder="Character name" maxlength="12">
+   <select id="lk-mode" class="btn" aria-label="Account type"><option value="hiscore_oldschool_hardcore_ironman">Hardcore Ironman</option><option value="hiscore_oldschool_ironman">Ironman</option><option value="hiscore_oldschool">Regular</option></select>
+   <a class="btn" id="lk-hs" target="_blank" rel="noopener">Open hiscores</a><a class="btn" id="lk-ws" target="_blank" rel="noopener">Open WikiSync</a></div>
+   <textarea id="lk-text" aria-label="Pasted lookup data" placeholder="Paste the copied page here"></textarea>
+   <div class="acts"><button class="btn pri" id="lk-go">Import</button></div><p class="note" id="lk-msg"></p></section>
+  <section class="stage"><h3>Levels</h3><div class="stats">${SK.map(k=>`<label for="lv-${k}">${k}<input id="lv-${k}" type="number" min="1" max="99" inputmode="numeric" value="${store.lv[k]||""}" placeholder="${k==="Hitpoints"?10:1}"></label>`).join("")}</div></section>
+  <section class="stage"><h3>Backup</h3><p>Progress is kept in this browser. Copy the code to move it to another device or keep a spare.</p>
+   <div class="acts"><button class="btn" id="bk-copy">Copy backup code</button><button class="btn" id="bk-load">Restore from code below</button><button class="btn" id="bk-reset">Reset all progress</button></div>
+   <textarea id="bk-text" aria-label="Backup code" placeholder="Paste a backup code here, then press Restore"></textarea><p class="note" id="bk-msg"></p></section>`;
+  main.querySelectorAll(".stats input").forEach(i=>i.addEventListener("input",()=>{const k=i.id.slice(3),v=Math.max(1,Math.min(99,parseInt(i.value)||0));if(i.value==="")delete store.lv[k];else store.lv[k]=v;save()}));
+  const nm=document.getElementById("lk-name"),md=document.getElementById("lk-mode");
+  const links=()=>{const n=encodeURIComponent(nm.value.trim());store.name=nm.value.trim();save();
+    document.getElementById("lk-hs").href=`https://secure.runescape.com/m=${md.value}/index_lite.json?player=${n}`;
+    document.getElementById("lk-ws").href=`https://sync.runescape.wiki/runelite/player/${n}/STANDARD`};
+  nm.addEventListener("input",links);md.addEventListener("change",links);links();
+  document.getElementById("lk-go").onclick=()=>{const r=importData(document.getElementById("lk-text").value);
+    if(r.ok){drawStats();drawNav()}document.getElementById("lk-msg").textContent=r.msg};
+  const msg=t=>document.getElementById("bk-msg").textContent=t,ta=document.getElementById("bk-text");
+  document.getElementById("bk-copy").onclick=()=>{const code=btoa(unescape(encodeURIComponent(JSON.stringify(store))));ta.value=code;
+    (navigator.clipboard?navigator.clipboard.writeText(code):Promise.reject()).then(()=>msg("Copied."),()=>{ta.select();msg("Select the code above and copy it.")})};
+  document.getElementById("bk-load").onclick=()=>{try{const s=JSON.parse(decodeURIComponent(escape(atob(ta.value.trim()))));if(!s.st)throw 0;store={st:s.st,lv:s.lv||{}};save();drawStats();document.getElementById("bk-msg").textContent="Restored."}catch(e){msg("That code did not work. Paste the whole code and try again.")}};
+  let armed=false;const rb=document.getElementById("bk-reset");rb.onclick=()=>{if(!armed){armed=true;rb.textContent="Press again to erase everything";return}store={st:{},lv:{}};save();drawStats();drawNav()};
+}
+/* ---------- import from pasted hiscores / WikiSync JSON ---------- */
+const BK={"Barrows":["Barrows Chests","Barrows"],"Moons of Peril":["Lunar Chests","Moons of Peril"],"Fight Caves: TzTok-Jad":["TzTok-Jad"],"The Inferno":["TzKal-Zuk"],
+ "Fortis Colosseum":["Sol Heredit"],"Corrupted Gauntlet":["The Corrupted Gauntlet"],"God Wars Dungeon":["General Graardor","Kree'Arra","Commander Zilyana","K'ril Tsutsaroth"],
+ "Dagannoth Kings":["Dagannoth Rex","Dagannoth Prime","Dagannoth Supreme"],"Desert Treasure II bosses":["Duke Sucellus","The Leviathan","The Whisperer","Vardorvis"],
+ "Wilderness bosses":["Artio","Calvar'ion","Spindel","Callisto","Vet'ion","Venenatis"],"Royal Titans":["The Royal Titans","Royal Titans"]};
+const nz=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,"");
+function importData(text){let o;try{o=JSON.parse(text.trim())}catch(e){return{ok:false,msg:"That is not the page data. Copy the whole page the link opens, starting with { and ending with }."}}
+  let lv=0,bs=0,qs=0,ds=0,sk=0;const all=[];Object.values(PAGES).forEach(p=>p.stages.forEach(s=>s.n.forEach(n=>all.push(n))));
+  const mark=n=>{if(!store.st[n.id]){store.st[n.id]=1;return 1}return 0};
+  const setLv=(k,v)=>{v=+v;if(SK.includes(k)&&v>=1){store.lv[k]=Math.min(99,v);lv++}};
+  if(Array.isArray(o.skills))o.skills.forEach(s=>setLv(s.name,s.level));
+  if(o.levels)Object.entries(o.levels).forEach(([k,v])=>setLv(k,v));
+  if(Array.isArray(o.activities)){const kc=new Set(o.activities.filter(a=>a.score>0).map(a=>nz(a.name)));
+    PAGES.bosses.stages.forEach(s=>s.n.forEach(n=>{if((BK[n.name]||[n.name]).some(a=>kc.has(nz(a))))bs+=mark(n)}))}
+  if(o.quests){const names=Object.keys(o.quests).sort((a,b)=>b.length-a.length);
+    all.forEach(n=>{if(n.tag!=="Quest")return;let q=(n.f.q||"")+" | "+n.name,found=0,okAll=true;
+      names.forEach(k=>{const i=q.indexOf(k);if(i<0)return;found++;const started=/start\s*$/i.test(q.slice(0,i));
+        if(!(o.quests[k]===2||(started&&o.quests[k]>=1)))okAll=false;q=q.slice(0,i)+"#".repeat(k.length)+q.slice(i+k.length)});
+      if(found&&okAll)qs+=mark(n)})}
+  if(o.achievement_diaries){const A=o.achievement_diaries;all.forEach(n=>{if(n.tag!=="Diary")return;
+    const m=/(Ardougne|Lumbridge|Kourend|Varrock|Falador|Morytania|Kandarin|Karamja|Desert|Fremennik|Western|Wilderness)[^.;]*?\b(easy|medium|hard|elite)\b/i.exec(n.f.g||"");if(!m)return;
+    const area=Object.keys(A).find(k=>k.toLowerCase().startsWith(m[1].toLowerCase()));if(!area)return;
+    const tier=Object.keys(A[area]).find(k=>k.toLowerCase()===m[2].toLowerCase());if(tier&&A[area][tier].complete)ds+=mark(n)})}
+  if(lv)all.forEach(n=>{if(n.tag==="Skill"&&!n.f.q&&reqs(n).length&&met(n))sk+=mark(n)});
+  if(!lv&&!bs&&!qs&&!ds)return{ok:false,msg:"Nothing recognisable in that paste. Use the page from one of the two links above."};
+  save();return{ok:true,msg:`Imported: ${lv} levels, and ticked ${bs} bosses, ${qs} quest boxes, ${ds} diary boxes and ${sk} level milestones. Item drops cannot be detected, so tick those by hand.`}}
+function drawModes(){
+  main.innerHTML=`<div class="head"><h2>Iron and hardcore rules</h2><p>What the two modes change, and how this guide accounts for them.</p></div><div class="cards">
+  <div class="card"><h3>Ironman</h3><ul><li>No Grand Exchange and no trading with other players.</li><li>No picking up other players' drops, and no loot from kills where others did most of the damage.</li><li>Everything is gathered, crafted, bought from shops or dropped for you. That is why shops, diaries and minigame rewards carry so much weight here.</li></ul></div>
+  <div class="card"><h3>Hardcore Ironman</h3><ul><li>All Ironman rules, plus one life. An unsafe death turns the account into a regular Ironman and freezes its hardcore hiscores entry.</li><li>Deaths in safe minigames do not count. Nightmare Zone, Pest Control, Barbarian Assault, Castle Wars, Soul Wars, Last Man Standing and the Mage Training Arena are the usual ones.</li><li>The Fight Caves, Inferno, Wintertodt, Barrows, the Gauntlet, all three raids, the Colosseum and anything in the Wilderness do count.</li><li>Check the wiki's Ironman Mode page before a first attempt at anything; the safe list has changed over the years.</li></ul></div>
+  <div class="card"><h3>How the charts use this</h3><ul><li>Red notes in a tooltip are hardcore warnings.</li><li>Boss boxes carry a risk rating: Safe, Low, Medium or High.</li><li>Skip is there for Wilderness and other content a hardcore may choose never to touch. Skipped boxes count toward chart completion.</li></ul></div></div>`;
+}
+addEventListener("hashchange",()=>{draw();scrollTo(0,0)});
+addEventListener("scroll",()=>{if(canHover&&open)hideTip()},{passive:true});
+draw();
+</script>
+
+</body>
+</html>
